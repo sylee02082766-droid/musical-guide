@@ -151,11 +151,22 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        pass
+        # 사용자가 Ctrl+C를 누르면 정상적인 종료 로직으로 넘어감
+        node.get_logger().info('종료 신호 수신: 모터를 정지하고 노드를 닫습니다.')
+    except Exception as e:
+        node.get_logger().error(f'알 수 없는 에러 발생: {e}')
     finally:
-        node.cmd_vel_pub.publish(Twist()) 
+        # ROS 통신 컨텍스트가 살아있을 때만 정지 명령 발행 시도
+        if rclpy.ok():
+            try:
+                node.cmd_vel_pub.publish(Twist())
+            except Exception:
+                pass
+        
+        # 안전하게 노드 파괴 및 rclpy 종료
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
